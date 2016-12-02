@@ -57,6 +57,7 @@ function [xyzace_post_rtcp] = rtcp_apply(xyzace_pre_rtcp)
   dblOffsetImpulsi = zeros (8,1);
   dblOffsetImpulsi(defIndexAsseA) = 144731.000000;
   dblOffsetImpulsi(defIndexAsseC) = 16737.000000;
+
   
   
   % calcolo le coordinate di A e C in radianti
@@ -64,6 +65,25 @@ function [xyzace_post_rtcp] = rtcp_apply(xyzace_pre_rtcp)
   fPosRad_0=(l_pos_before_tcp_imp(defIndexAsseA) - dblOffsetImpulsi(defIndexAsseA)) * dblImp2Deg(defIndexAsseA) * defDeg2Rad;
   % posizione asse C in radianti
   fPosRad_1=(l_pos_before_tcp_imp(defIndexAsseC) - dblOffsetImpulsi(defIndexAsseC)) * dblImp2Deg(defIndexAsseC) * defDeg2Rad;
+
+%
+%
+% BEGIN TANGENTIAL AXIS HERE    
+%
+%
+  %// get the current tangential axis position [pulses]
+  rtcp_tangential_axis.f_input_alfa_asse_tg_pulses = l_pos_before_tcp_imp(defIndexAsseTg);
+  %// now we get the anticlockwise positive position in radiants, without the position offset
+  %// invert the sign because the tangential axis move positive clockwise, convert from pulses to degrees, remove the axis offset, convert from degrees to radiants
+  rtcp_tangential_axis.f_alfa_asse_tg_no_offset_rad = -1  * (rtcp_tangential_axis.f_input_alfa_asse_tg_pulses * dblImp2Deg(defIndexAsseTg) - dblOffsetImpulsi(defIndexAsseTg))* (defDeg2Rad);
+  %// the RTCP calculation needs to be done
+  rtcp_tangential_axis.do_calc = 1;
+%
+%
+% END TANGENTIAL AXIS HERE    
+%
+%
+  
   
  
   % calcolo la distanza attuale fra punta dell'utensile ed asse del divisore
@@ -80,6 +100,22 @@ function [xyzace_post_rtcp] = rtcp_apply(xyzace_pre_rtcp)
   % applico la rotazione C immaginando che asse A sia verticale;  dopo questa correzione vado ad applicare
   % il brandeggio A
   f_C_rot_angle = fPosRad_1;
+  
+  
+%
+%
+% BEGIN TANGENTIAL AXIS HERE    
+%
+%
+	if (rtcp_tangential_axis.do_calc)
+		rtcp_tangential_axis.f_alfa_asse_tg_no_offset_C_rot_rad = rtcp_tangential_axis.f_alfa_asse_tg_no_offset_rad + f_C_rot_angle;
+	endif
+%
+%
+% END TANGENTIAL AXIS HERE    
+%
+%
+  
 
   %#ifdef def_rtcp_with_tangential_axis
   %add_calc_rtcp_tangential_axis_C_rotation(f_C_rot_angle);
@@ -112,6 +148,38 @@ function [xyzace_post_rtcp] = rtcp_apply(xyzace_pre_rtcp)
   %// se inclino di un angolo alfa l'asse A, la nuova distanza in Y fra asse divisore e punta è data da r*(sin(beta+alfa))
   f_new_distanza_tool_asse_divisore_mm_y = f_base_distanza_tool_asse_divisore_mm_yz * sin(rotate_angle);
 
+  
+
+%
+%
+% BEGIN TANGENTIAL AXIS HERE    
+%
+%
+	if (rtcp_tangential_axis.do_calc)
+    sign_angle_asse_tg = sign(rtcp_tangential_axis.f_alfa_asse_tg_no_offset_C_rot_rad);
+		y_distance_from_y0_before_A_rotation_mm = f_base_distanza_tool_asse_divisore_mm_y;
+    y_distance_from_y0_after_A_rotation_mm = f_new_distanza_tool_asse_divisore_mm_y;
+    if (sign(y_distance_from_y0_before_A_rotation_mm) != sign(y_distance_from_y0_after_A_rotation_mm))
+      sign_angle_asse_tg *= -1;
+    endif
+		rtcp_tangential_axis.f_alfa_asse_tg_no_offset_C_rot_A_rot_rad = sign_angle_asse_tg * atan2(abs(y_distance_from_y0_after_A_rotation_mm) * tan(rtcp_tangential_axis.f_alfa_asse_tg_no_offset_C_rot_rad), abs(y_distance_from_y0_before_A_rotation_mm));
+	endif  
+  
+	f_alfa_asse_tg_delta_positive_clockwise_pulses = 0;
+	if (rtcp_tangential_axis.do_calc)
+  % calculates the position variation
+		rtcp_tangential_axis.f_alfa_asse_tg_delta_positive_anticlockwise_rad = rtcp_tangential_axis.f_alfa_asse_tg_no_offset_C_rot_A_rot_rad - rtcp_tangential_axis.f_alfa_asse_tg_no_offset_rad;
+		f_alfa_asse_tg_delta_positive_clockwise_pulses = -1 * rtcp_tangential_axis.f_alfa_asse_tg_delta_positive_anticlockwise_rad * (defRad2Deg) * dblDeg2Imp(defIndexAsseTg);
+	endif
+	rtcp_tangential_axis.f_output_alfa_asse_tg_delta_positive_clockwise_pulses = f_alfa_asse_tg_delta_positive_clockwise_pulses;
+	rtcp_tangential_axis.valid = 1;  
+%
+%
+% END TANGENTIAL AXIS HERE    
+%
+%
+  
+  
  % #ifdef def_rtcp_with_tangential_axis
   %add_calc_rtcp_tangential_axis_A_rotation(f_base_distanza_tool_asse_divisore_mm_y, f_new_distanza_tool_asse_divisore_mm_y);
   %close_calc_rtcp_tangential_axis();
@@ -129,5 +197,9 @@ function [xyzace_post_rtcp] = rtcp_apply(xyzace_pre_rtcp)
   for i=defIndexAsseX:defIndexAsseZ
     xyzace_post_rtcp(i) = xyzace_pre_rtcp(i) + l_delta_tcp_imp(i);
   endfor;
+  % adds tangential axis delta position
+  xyzace_post_rtcp(defIndexAsseTg) = xyzace_pre_rtcp(defIndexAsseTg) + rtcp_tangential_axis.f_output_alfa_asse_tg_delta_positive_clockwise_pulses;
 
 endfunction
+
+

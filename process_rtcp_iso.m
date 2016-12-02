@@ -1,4 +1,4 @@
-function [coords_out, coords_out_iso] = process_rtcp_iso(iso_filename)
+function [coords_out, coords_out_iso, trace_coords_1, trace_coords_2, xy_c, or_xy] = process_rtcp_iso(iso_filename)
   coords_out = zeros(8,1);
   coords_out_iso = zeros(8,1);
   coords_prertcp = zeros(8,1);
@@ -46,6 +46,7 @@ function [coords_out, coords_out_iso] = process_rtcp_iso(iso_filename)
     display(msg);
     return;
   endif
+  cnt_lines = 0;
   while(1)
     s = fgets(f);
     if (s < 0)
@@ -55,6 +56,10 @@ function [coords_out, coords_out_iso] = process_rtcp_iso(iso_filename)
     if (error)
       break;
     endif;
+    cnt_lines = cnt_lines + 1;
+    %if (cnt_lines > 40)
+    %  break;
+    %endif;
     coords_from_iso_and_origin = new_coordinates(:) + iso_origin(:);
     coords_out_iso(:, idx_coords_line) = coords_from_iso_and_origin;
 %    coords(:, idx_coords_line) = new_coordinates(:);
@@ -75,15 +80,46 @@ function [coords_out, coords_out_iso] = process_rtcp_iso(iso_filename)
     for i = defIndexAsseA:defIndexAsseC
       coords_postrtcp(i) = (coords_postrtcp_imp(i) - dblOffsetImpulsi(i)) .* dblImp2Deg(i);
     endfor;
+    coords_postrtcp(defIndexAsseTg) = (coords_postrtcp_imp(defIndexAsseTg) - dblOffsetImpulsi(defIndexAsseTg)) .* dblImp2Deg(defIndexAsseTg);
     coords_out(:, idx_coords_line) = coords_postrtcp(:);
     idx_coords_line = idx_coords_line + 1;
     %disp(coords_postrtcp);
   endwhile;
   fclose(f);
-  plot3(coords_out(1,:),coords_out(2,:),coords_out(3,:));
-  xlabel("X");
-  ylabel("Y");
-  zlabel("Z");
-  % invert zdir
-  set(gca,'zdir','reverse');
+  if (1)
+    xy_c = zeros(3, length(coords_out));
+    or_xy = zeros(2, length(coords_out));
+    trace_coords_1 = zeros(3, length(coords_out));
+    trace_coords_2 = zeros(3, length(coords_out));
+    dxyz = zeros(3,3);
+    orig = zeros(3,1);
+    r = 50;
+    orig_rotate_A = [iso_origin(1), iso_origin(2), 468.967438 - 125.0];
+    orig_rotate_C = [iso_origin(1), iso_origin(2), 468.967438 - 125.0 - r];
+    trace_coords_1(1:3, 1) = coords_out(1:3 , 1);
+    trace_coords_2(1:3, 1) = coords_out(1:3 , 1);
+    x_orig = orig_rotate_A(1);
+    for i=2:length(coords_out)
+      orig = [orig_rotate_A(1), orig_rotate_A(2) - r * sin(coords_out(4,i)*pi/180), orig_rotate_A(3) + r * (1 - cos(coords_out(4,i)*pi/180))];
+      dxyz(3, :) = dxyz(2, :);
+      dxyz(2, :) = dxyz(1, :);
+      dxyz(1, :) = [coords_out(1,i) - x_orig, coords_out(2,i) - orig(2), coords_out(3,i) - orig(3)];
+      trace_coords_1(:, i) = orig + dxyz(2, :);
+      trace_coords_2(:, i) = orig + dxyz(3, :);
+      alfa = -1*coords_out(5,i) * pi/180;
+      xy_c(1 , i) = dxyz(1, 1) * cos(alfa) - dxyz(1, 2) * sin(alfa) ;
+      xy_c(2 , i) = dxyz(1, 1) * sin(alfa) + dxyz(1, 2) * cos(alfa) ;
+      xy_c(3 , i) = coords_out(5,i);
+      or_xy(1, i) = orig(1);
+      or_xy(2, i) = orig(2);
+    endfor 
+    
+  else
+    plot3(coords_out(1,:),coords_out(2,:),coords_out(3,:));
+    xlabel("X");
+    ylabel("Y");
+    zlabel("Z");
+    % invert zdir
+    set(gca,'zdir','reverse');
+  endif;
 endfunction
