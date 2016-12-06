@@ -48,6 +48,7 @@ function [coords_out, coords_out_iso, trace_coords_1, trace_coords_2, xy_c, or_x
   endif
   cnt_lines = 0;
   tg_axis_angle_rad = 0;
+  nr_asse_tg = 0;
   while(1)
     s = fgets(f);
     if (s < 0)
@@ -82,13 +83,14 @@ function [coords_out, coords_out_iso, trace_coords_1, trace_coords_2, xy_c, or_x
       dy = coords_out_iso(2, idx_coords_line) - coords_out_iso(2, idx_coords_line - 1);
       if ( dx != 0) || ( dy != 0)
         tg_axis_angle_rad = -1 * atan2(dy, dx);
-        while( abs(tg_axis_angle_rad) >= pi)
-          tg_axis_angle_rad -= 2* pi * sign (tg_axis_angle_rad);
-        endwhile
+        delta_rad = tg_axis_angle_rad - tg_axis_base(idx_coords_line - 1) + nr_asse_tg * pi;
+        if (abs(delta_rad) > pi)
+          nr_asse_tg += round(-1 * (delta_rad / (pi)));
+        endif
       endif;
     endif
-    tg_axis_base(idx_coords_line) = tg_axis_angle_rad;
-    coords_4_rtcp_imp(defIndexAsseTg) = tg_axis_angle_rad * 180 / pi * dblDeg2Imp(defIndexAsseTg);
+    tg_axis_base(idx_coords_line) = tg_axis_angle_rad + nr_asse_tg * pi;
+    coords_4_rtcp_imp(defIndexAsseTg) = tg_axis_base(idx_coords_line) * 180 / pi * dblDeg2Imp(defIndexAsseTg);
     %disp(coords_prertcp);
     [coords_postrtcp_imp] = rtcp_apply(coords_4_rtcp_imp);
     for i = defIndexAsseX:defIndexAsseZ
