@@ -156,9 +156,14 @@ function [xyzace_post_rtcp] = rtcp_apply(xyzace_pre_rtcp)
 %
 %
 	if (rtcp_tangential_axis.do_calc)
+    n_round = fix(rtcp_tangential_axis.f_alfa_asse_tg_no_offset_C_rot_rad / pi);
+    angle_base = rtcp_tangential_axis.f_alfa_asse_tg_no_offset_C_rot_rad - (n_round * pi);
+    if (abs(angle_base) > pi)
+        error('angle base too high');
+    endif;
     sign_angle_asse_tg = sign(rtcp_tangential_axis.f_alfa_asse_tg_no_offset_C_rot_rad);
     angle_tg = rtcp_tangential_axis.f_alfa_asse_tg_no_offset_C_rot_rad;
-		rtcp_tangential_axis.f_alfa_asse_tg_no_offset_C_rot_A_rot_rad = sign_angle_asse_tg * abs(atan2(cos(fPosRad_0)*sin(angle_tg), cos(angle_tg)));
+		rtcp_tangential_axis.f_alfa_asse_tg_no_offset_C_rot_A_rot_rad = (n_round * pi) + atan2(cos(fPosRad_0)*sin(angle_base), cos(angle_base));
 	endif  
   
 	f_alfa_asse_tg_delta_positive_clockwise_pulses = 0;
