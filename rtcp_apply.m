@@ -108,7 +108,7 @@ function [xyzace_post_rtcp] = rtcp_apply(xyzace_pre_rtcp)
 %
 %
 	if (rtcp_tangential_axis.do_calc)
-		rtcp_tangential_axis.f_alfa_asse_tg_no_offset_C_rot_rad = rtcp_tangential_axis.f_alfa_asse_tg_no_offset_rad + f_C_rot_angle;
+ 		rtcp_tangential_axis.f_alfa_asse_tg_no_offset_C_rot_rad = rtcp_tangential_axis.f_alfa_asse_tg_no_offset_rad + f_C_rot_angle;
 	endif
 %
 %
@@ -157,12 +157,8 @@ function [xyzace_post_rtcp] = rtcp_apply(xyzace_pre_rtcp)
 %
 	if (rtcp_tangential_axis.do_calc)
     sign_angle_asse_tg = sign(rtcp_tangential_axis.f_alfa_asse_tg_no_offset_C_rot_rad);
-		y_distance_from_y0_before_A_rotation_mm = f_base_distanza_tool_asse_divisore_mm_y;
-    y_distance_from_y0_after_A_rotation_mm = f_new_distanza_tool_asse_divisore_mm_y;
-    if (sign(y_distance_from_y0_before_A_rotation_mm) != sign(y_distance_from_y0_after_A_rotation_mm))
-      sign_angle_asse_tg *= -1;
-    endif
-		rtcp_tangential_axis.f_alfa_asse_tg_no_offset_C_rot_A_rot_rad = sign_angle_asse_tg * atan2(abs(y_distance_from_y0_after_A_rotation_mm) * tan(rtcp_tangential_axis.f_alfa_asse_tg_no_offset_C_rot_rad), abs(y_distance_from_y0_before_A_rotation_mm));
+    angle_tg = rtcp_tangential_axis.f_alfa_asse_tg_no_offset_C_rot_rad;
+		rtcp_tangential_axis.f_alfa_asse_tg_no_offset_C_rot_A_rot_rad = sign_angle_asse_tg * abs(atan2(cos(fPosRad_0)*sin(angle_tg), cos(angle_tg)));
 	endif  
   
 	f_alfa_asse_tg_delta_positive_clockwise_pulses = 0;
