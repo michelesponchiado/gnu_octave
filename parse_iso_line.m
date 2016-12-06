@@ -1,5 +1,6 @@
-function [new_coordinates, error] = parse_iso_line(line, current_coordinates)
+function [new_coordinates, error, valid_move_found] = parse_iso_line(line, current_coordinates)
   error = 0;
+  valid_move_found = 0;
   new_coordinates = current_coordinates;
   for i = 1:length(line)
     c = line(i);
@@ -13,18 +14,23 @@ function [new_coordinates, error] = parse_iso_line(line, current_coordinates)
     if     c == 'X'
       idx_dst = 1;
       set_pos = 1;
+      valid_move_found = 1;
     elseif c == 'Y'
       idx_dst = 2;
       set_pos = 1;
+      valid_move_found = 1;
     elseif c == 'Z'
       idx_dst = 3;
       set_pos = 1;
+      valid_move_found = 1;
     elseif c == 'A'
       idx_dst = 4;
       set_pos = 1;
+      valid_move_found = 1;
     elseif c == 'C'
       idx_dst = 5;
       set_pos = 1;
+      valid_move_found = 1;
     endif;
     if (set_pos > 0)
       pos_str = substr(line, i + 1);

@@ -1,4 +1,4 @@
-function [coords_out, coords_out_iso, trace_coords_1, trace_coords_2, xy_c, or_xy] = process_rtcp_iso(iso_filename)
+function [coords_out, coords_out_iso, trace_coords_1, trace_coords_2, xy_c, or_xy, tg_axis_base] = process_rtcp_iso(iso_filename)
   coords_out = zeros(8,1);
   coords_out_iso = zeros(8,1);
   coords_prertcp = zeros(8,1);
@@ -47,14 +47,18 @@ function [coords_out, coords_out_iso, trace_coords_1, trace_coords_2, xy_c, or_x
     return;
   endif
   cnt_lines = 0;
+  tg_axis_angle_rad = 0;
   while(1)
     s = fgets(f);
     if (s < 0)
       break;
     endif;
-    [new_coordinates, error] = parse_iso_line(s, coords_prertcp);
+    [new_coordinates, error, valid_move_found] = parse_iso_line(s, coords_prertcp);
     if (error)
       break;
+    endif;
+    if (valid_move_found == 0)
+      continue;
     endif;
     cnt_lines = cnt_lines + 1;
     %if (cnt_lines > 40)
@@ -72,6 +76,19 @@ function [coords_out, coords_out_iso, trace_coords_1, trace_coords_2, xy_c, or_x
     for i = defIndexAsseA:defIndexAsseC
       coords_4_rtcp_imp(i) = coords_from_iso_and_origin(i) .* dblDeg2Imp(i) + dblOffsetImpulsi(i);
     endfor;
+    % calculates tangential axis position
+    if (idx_coords_line > 1)
+      dx = coords_out_iso(1, idx_coords_line) - coords_out_iso(1, idx_coords_line - 1);
+      dy = coords_out_iso(2, idx_coords_line) - coords_out_iso(2, idx_coords_line - 1);
+      if ( dx != 0) || ( dy != 0)
+        tg_axis_angle_rad = -1 * atan2(dy, dx);
+        while( abs(tg_axis_angle_rad) >= pi)
+          tg_axis_angle_rad -= 2* pi * sign (tg_axis_angle_rad);
+        endwhile
+      endif;
+    endif
+    tg_axis_base(idx_coords_line) = tg_axis_angle_rad;
+    coords_4_rtcp_imp(defIndexAsseTg) = tg_axis_angle_rad * 180 / pi * dblDeg2Imp(defIndexAsseTg);
     %disp(coords_prertcp);
     [coords_postrtcp_imp] = rtcp_apply(coords_4_rtcp_imp);
     for i = defIndexAsseX:defIndexAsseZ
